@@ -25,10 +25,14 @@
     </table>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
+    <script src="/luci-static/resources/cbi.js"></script>
     <script>
+let leases
+
 async function fetchLeases() {
 	const res = await window.fetch('./json')
-	return res.json()
+	leases = await res.json()
+	renderLeases()
 }
 
 function h(tag, childrenOrText, props) {
@@ -48,29 +52,56 @@ function h(tag, childrenOrText, props) {
 	return el;
 }
 
+function now () {
+	return Math.floor(Date.now() / 1000)
+}
 
-	async function renderLeases() {
-		const leases = await fetchLeases()
-		const v4 = leases.dhcp_leases.map(lease => {
-			return h('tr', [
-				h('th', lease.ipaddr, { scope: 'row' }),
-				h('td', lease.hostname),
-				h('td', lease.macaddr),
-				h('td', String(lease.expires)),
-				h('td', 'IPv4')
-			])
-		})
-		const v6 = []
-		const body = document.getElementById('body')
-		body.innerHTML = ''
-		for (const el of v4.concat(v6)) {
-			body.appendChild(el)
-		}
-		// TODO: v6, extra properties
+async function renderLeases() {
+	if (!leases) return
+
+	const v4 = leases.dhcp_leases.map(lease => {
+		if (!lease.base_time) lease.base_time = now()
+
+		return h('tr', [
+			h('th', lease.ipaddr, { scope: 'row' }),
+			h('td', lease.hostname),
+			h('td', lease.macaddr),
+			h('td',
+				lease.expires === false ? h('em', 'unlimited') :
+				lease.expires <= 0 ? h('em', 'expired') :
+				'%t'.format(lease.expires - (now() - lease.base_time))
+			),
+			h('td', 'IPv4')
+		])
+	})
+
+	const v6 = leases.dhcp6_leases.map(lease => {
+		if (!lease.base_time) lease.base_time = now()
+
+		return h('tr', [
+			h('th', lease.ip6addrs ? lease.ip6addrs.join(' ') : lease.ip6add, { scope: 'row' }),
+			h('td', lease.hostname),
+			h('td', lease.macaddr),
+			h('td',
+				lease.expires === false ? h('em', 'unlimited') :
+				lease.expires <= 0 ? h('em', 'expired') :
+				'%t'.format(lease.expires - (now() - lease.base_time))
+			),
+			h('td', 'IPv6')
+		])
+	})
+
+	const body = document.getElementById('body')
+	body.innerHTML = ''
+
+	for (const el of v4.concat(v6)) {
+		body.appendChild(el)
 	}
+}
 
-	renderLeases()
-	setInterval(renderLeases, 10 * 1000)
+setInterval(renderLeases, 1000)
+setInterval(fetchLeases, 10 * 1000)
+fetchLeases()
     </script>
   </body>
 </html>
