@@ -1,0 +1,5 @@
+#!/usr/bin/lua
+
+print ("content-type: application/json\n\r")
+
+print(io.popen('ubus call luci-rpc getDHCPLeases {}', 'r'):read('*a'))

@@ -1,0 +1,5 @@
+#!/usr/bin/lua
+
+print ("content-type: text/html\n\r")
+
+print(io.open('/www/cgi-bin/dhcp/index_template', 'r'):read('*a'))
