@@ -14,24 +14,63 @@
           <th scope="col">Hostname</th>
           <th scope="col">MAC Address</th>
           <th scope="col">Expires in</th>
-          <th scope="col">Tyoe</th>
+          <th scope="col">Type</th>
         </tr>
       </thead>
       <tbody id="body">
+        <tr>
+          <td scope="row" colspan="10">Loading...</td>
+        </tr>
       </tbody>
     </table>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
     <script>
-      async function fetchLeases() {
-        const res = await window.fetch('./json')
-        return res.json()
-      }
+async function fetchLeases() {
+	const res = await window.fetch('./json')
+	return res.json()
+}
 
-      async function renderLeases() {
-        const leases = await fetchLeases()
-        
-      }
+function h(tag, childrenOrText, props) {
+	const el = document.createElement(tag);
+	if (Array.isArray(childrenOrText)) {
+		childrenOrText.forEach((child) => el.appendChild(child));
+	} else if (typeof childrenOrText === 'string') {
+		el.appendChild(document.createTextNode(childrenOrText));
+	}
+
+	if (props) {
+		for (const key of Object.keys(props)) {
+			el[key] = props[key];
+		}
+	}
+
+	return el;
+}
+
+
+	async function renderLeases() {
+		const leases = await fetchLeases()
+		const v4 = leases.dhcp_leases.map(lease => {
+			return h('tr', [
+				h('th', lease.ipaddr, { scope: 'row' }),
+				h('td', lease.hostname),
+				h('td', lease.macaddr),
+				h('td', String(lease.expires)),
+				h('td', 'IPv4')
+			])
+		})
+		const v6 = []
+		const body = document.getElementById('body')
+		body.innerHTML = ''
+		for (const el of v4.concat(v6)) {
+			body.appendChild(el)
+		}
+		// TODO: v6, extra properties
+	}
+
+	renderLeases()
+	setInterval(renderLeases, 10 * 1000)
     </script>
   </body>
 </html>
